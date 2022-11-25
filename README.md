@@ -44,3 +44,9 @@ verify(proof, _root, _length; hash = tuple)
 A scenario where they are combined is when a client sends an element for inclusion in the list for which it receives a signed (root1, length1) and inclusion proof. Later on, the client wants to check that the element is still within the list. Instead of again asking for an inclusion proof server sends back a consistency proof for (root1, length1) at the current state (root2, length2), which is signed. That way, a client also enforces that other clients' messages have not been modified. 
 
 **Note: a whole tree hash is currently recomputed for every new element added; thus, performance is not so great.**
+
+## References
+
+- Crosby, Scott A. and Dan S. Wallach. *Efficient Data Structures For Tamper-Evident Logging.* USENIX Security Symposium (2009).
+- RFC6962 and RFC9162
+- Farhan Aly. *Don't trust your logs! Implementing a Merkle tree for an Immutable Verifiable Log (in Go)* (2022)

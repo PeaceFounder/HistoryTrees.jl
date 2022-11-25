@@ -138,15 +138,6 @@ _length = length(tree)
 proof = InclusionProof(tree, 3)
 @test verify(proof, _root, _length; hash = tuple)
 
-# Relevant if one attempts to keep a local copy of the list. Can be useful to check that elements in a subtree are not modified/removed. 
-# - have a shorter list with root0
-# - a master lsit is with root1
-# - a client asks if root0 is in root1
-# - if so clent receives element hashes from root0 to root1 and is sure that the resulting hash should be root1 when elements are added. Note that inclusion proof in principle could be added for each element.
-
-# With consistency proof it is also possible to search for a place where trees start to differ. 
-
-
 proof = ConsistencyProof(tree, 3)
 @test verify(proof, _root, _length; hash = tuple)
 
