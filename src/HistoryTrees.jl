@@ -7,7 +7,10 @@ mutable struct HistoryTree
     root
 end
 
+leaf(tree::HistoryTree, N::Int) = tree.d[N]
+
 root(tree::HistoryTree) = tree.root
+root(tree::HistoryTree, N::Int) = treehash(view(tree.d, 1:N); hash = tree.hash)
 
 HistoryTree(d::Vector{<:Any}, hash) = HistoryTree(d, hash, treehash(d; hash))
 
@@ -42,6 +45,7 @@ function InclusionProof(tree::HistoryTree, index::Int)
     return InclusionProof(path, index, leaf)
 end
 
+leaf(proof::InclusionProof) = proof.leaf
 
 function verify(proof::InclusionProof, root, length; hash)
     return verify_inclusion(proof.path, length, proof.index, root, proof.leaf; hash)
@@ -54,7 +58,6 @@ struct ConsistencyProof
     root # Internal
 end
 
-
 function ConsistencyProof(tree::HistoryTree, index::Int)
     
     (; d, hash) = tree
@@ -66,13 +69,11 @@ function ConsistencyProof(tree::HistoryTree, index::Int)
     return ConsistencyProof(path, index, root)
 end
 
+root(proof::ConsistencyProof) = proof.root
 
 function verify(proof::ConsistencyProof, root, length; hash)
     return verify_consistency(proof.path, length, proof.index, root, proof.root; hash)
 end
-
-
-
 
 function power2div(x::Int)
     
