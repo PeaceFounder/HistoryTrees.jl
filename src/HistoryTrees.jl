@@ -86,7 +86,7 @@ function power2div(x::Int)
     return s
 end
 
-function treehash(d::Vector{Int}; hash)
+function treehash(d::Vector{<:Any}; hash) 
     
     n = length(d)
 
@@ -106,7 +106,7 @@ end
 """
 The shortest path from the leaf to the root to calculate the tree hash. 
 """
-function inclusion_proof(d::Vector{Int}, m::Int; hash) 
+function inclusion_proof(d::Vector{<:Any}, m::Int; hash) 
     
     n = length(d)
     
@@ -133,7 +133,7 @@ bit(x::UInt8, n) = x << (8 - n) >> 7
 bit(x::UInt, n) = x << (64 - n) >> 63
 
 
-function verify_inclusion(p::Vector, at, i, root, leaf; debug::Union{Ref, Nothing} = nothing, hash)
+function verify_inclusion(p::Vector{<:Any}, at, i, root, leaf; debug::Union{Ref, Nothing} = nothing, hash)
 
     if i > at || (at > 0 && length(p) == 0)
         return false # note while testing 
@@ -169,14 +169,14 @@ end
 """
 A proof that subtree is part of the tree
 """
-function consistency_proof(d::Vector{Int}, m::Int; hash)
+function consistency_proof(d::Vector{<:Any}, m::Int; hash)
 
     @assert 1 <= m <= length(d)
 
     return subproof(m, d, true; hash)
 end
 
-function subproof(m::Int, d::Vector{Int}, b::Bool; hash)
+function subproof(m::Int, d::Vector{<:Any}, b::Bool; hash)
 
     path = []
     n = length(d)
