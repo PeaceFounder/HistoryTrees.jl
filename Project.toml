@@ -3,8 +3,12 @@ uuid = "6629d18c-a67a-486a-9b40-962f9d752038"
 authors = ["Janis Erdmanis <janiserdmanis@protonmail.ch>"]
 version = "0.1.0"
 
-[deps]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
 [compat]
 julia = "1"
+
+[targets]
+test = ["Nettle", "Test"]
+
+[extras]
+Nettle = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

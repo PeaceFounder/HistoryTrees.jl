@@ -135,6 +135,10 @@ bit(x::UInt, n) = x << (64 - n) >> 63
 
 function verify_inclusion(p::Vector{<:Any}, at, i, root, leaf; debug::Union{Ref, Nothing} = nothing, hash)
 
+    if i == at == 1
+        return leaf == root
+    end
+
     if i > at || (at > 0 && length(p) == 0)
         return false # note while testing 
     end
