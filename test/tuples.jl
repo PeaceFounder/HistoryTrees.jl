@@ -1,7 +1,7 @@
 using Test
 
 import HistoryTrees: treehash, inclusion_proof, verify_inclusion, consistency_proof, verify_consistency
-import HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof, verify, root
+import HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof, verify, root, slice
 
 
 @test treehash(collect(1:7); hash = tuple) == (((1, 2), (3, 4)), ((5, 6), 7))
@@ -122,11 +122,20 @@ end
 
 # Testing HistoryTree
 
-tree = HistoryTree(Int, tuple)
+#tree = HistoryTree(Int, tuple)
+
+tree = HistoryTree(Any, tuple)
 
 for i in 1:7
     push!(tree, i)
 end
+
+# cold start
+
+tree2 = HistoryTree(tree.d, tuple)
+
+@test root(tree) == root(tree2)
+@test tree.stack == tree2.stack
 
 # root and length is verifiaby communicated
 _root = root(tree)
@@ -139,4 +148,6 @@ proof = InclusionProof(tree, 3)
 proof = ConsistencyProof(tree, 3)
 @test verify(proof, _root, _length; hash = tuple)
 
+leafs, proof = slice(tree, 2:5)
+@test verify(leafs, proof, _root, _length; hash = tuple)
 

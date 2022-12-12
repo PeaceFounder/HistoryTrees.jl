@@ -7,7 +7,7 @@ An alternative is to hash list as a Merkle tree. For a list of four elements `[1
 A better approach is to use history trees which place leaves directly under the incomplete node. For seven elements that reduce root hash to `root = (((1, 2), (3, 4)), ((5, 6), 7))` and is more satisfying than padding and provides logarithmically sized proofs for inclusion of element and consistency of the tree. 
 
 To use a history tree first, one is constructed as
-```
+```julia
 tree = HistoryTree(Int, tuple)
 
 for i in 1:7
@@ -43,7 +43,7 @@ verify(proof, _root, _length; hash = tuple)
 
 A scenario where they are combined is when a client sends an element for inclusion in the list for which it receives a signed (root1, length1) and inclusion proof. Later on, the client wants to check that the element is still within the list. Instead of again asking for an inclusion proof server sends back a consistency proof for (root1, length1) at the current state (root2, length2), which is signed. That way, a client also enforces that other clients' messages have not been modified. 
 
-**Note: a whole tree hash is currently recomputed for every new element added; thus, performance is not so great.**
+**Note:** ~~a whole tree hash is currently recomputed for every new element added; thus, performance is not so great.~~  **Currently, multiple tree hashes are computed to construct proofs like `InclusionProof` and `ConsistencyProof`. A further improvement would be to store a complete subtree hash and retrieve them in the calculation. Prepending bytes with a leaf or node byte may be necessary for security.**
 
 ## References
 

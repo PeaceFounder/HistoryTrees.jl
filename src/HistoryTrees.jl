@@ -1,8 +1,90 @@
 module HistoryTrees
 
+# Legacy chain type 
+# In some situations is combined with Merkle trees
+
+mutable struct Chain
+    ledger::Vector{<:Any}
+    hash
+    root
+end
+
+Chain(::Type{T}, hash) where T = Chain(T[], hash, nothing)
+
+Base.length(chain::Chain) = length(chain.ledger)
+
+leaf(chain::Chain, i::Int) = chain.ledger[i]
+
+root(chain::Chain) = chain.root
+
+function chainhash(ledger::AbstractVector{<:Any}, root0; hash)
+
+    rooti = root0
+
+    for record in ledger
+        rooti = hash(rooti, record)
+    end
+
+    return rooti
+end
+
+function root(chain::Chain, i::Int)
+
+    if i == 0
+        return nothing
+    end
+
+    if i == 1
+        return leaf(chain, 1)
+    end
+
+    root0 = leaf(chain, 1)
+
+    return chainhash(view(chain.ledger, 2:i), root0; hash = chain.hash)
+end
+
+
+function Base.push!(chain::Chain, record)
+
+    if length(chain) == 0
+        chain.root = record
+        push!(chain.ledger, record)
+        return
+    end
+    
+    chain.root = chain.hash(chain.root, record)
+    push!(chain.ledger, record)
+    return
+end
+
+verify_segment(ledger::AbstractVector{<:Any}, root0, root1; hash) = chainhash(ledger, root0; hash) == root1
+
+verify_segment(ledger::AbstractVector{<:Any}, root1; hash) = chainhash(view(ledger, 2:lastindex(ledger)), first(ledger); hash) == root1
+
+struct ChainHead
+    root
+end
+
+ChainHead(chain::Chain, n::Int) = ChainHead(root(chain, n))
+
+verify(leafs::AbstractVector{<:Any}, segment::ChainHead, root1; hash) = isnothing(segment.root) ? verify_segment(leafs, root1; hash) : verify_segment(leafs, segment.root, root1; hash)
+
+verify(leaf, head::ChainHead, root1; hash) = isnothing(head.root) ? leaf == root1 : hash(head.root, leaf) == root1
+
+
+function slice(chain::Chain, range)
+    
+    leafs = chain.ledger[range]
+    proof = ChainHead(root(chain, first(range) - 1))
+
+    return leafs, proof
+end
+
+# Implemetation of HistoryTree
 
 mutable struct HistoryTree
     d::Vector{<:Any}
+    stack::Vector{<:Any}
     hash
     root
 end
@@ -12,18 +94,74 @@ leaf(tree::HistoryTree, N::Int) = tree.d[N]
 root(tree::HistoryTree) = tree.root
 root(tree::HistoryTree, N::Int) = treehash(view(tree.d, 1:N); hash = tree.hash)
 
-HistoryTree(d::Vector{<:Any}, hash) = HistoryTree(d, hash, treehash(d; hash))
 
-HistoryTree(::Type{T}, hash) where T = HistoryTree(T[], hash, nothing)
+HistoryTree(::Type{T}, hash) where T = HistoryTree(T[], T[], hash, nothing)
+
+# Cold start with already present data; 
+# TODO: rewrite with a while loop.
+function stack!(s::Vector, d::AbstractVector{<:Any}; hash)
+
+    n = power2div(length(d))
+    m = length(d) - n 
+
+    push!(s, treehash(view(d, 1:n); hash))
+
+    if m == 0
+        return s
+    else
+        return stack!(s, view(d, (n+1):lastindex(d)); hash)
+    end
+end
+
+stack(d::AbstractVector{T}; hash) where T = stack!(T[], d; hash)
+
+HistoryTree(d::Vector{<:Any}, hash) = HistoryTree(d, stack(d; hash), hash, treehash(d; hash))
 
 
 Base.length(tree::HistoryTree) = length(tree.d)
 
+
+log2int(x) = Int(log2(x))
+
+function collapse_length(n::Int)
+
+    if ispoweroftwo(n)
+        return log2int(n)        
+    else
+        collapse_length(n - power2div(n))
+    end
+end
+
+# index is the element which is going to be computed
+function treehash!(stack::Vector{<:Any}, index::Int, value; hash)
+
+    y = value
+
+    for _ in 1:collapse_length(index)
+
+        q = pop!(stack)
+        y = hash(q, y)
+
+    end
+
+    x = y
+
+    for si in reverse(stack)
+        x = hash(si, x)
+    end
+
+    push!(stack, y)
+
+    return x
+end
+
+
+
 function Base.push!(tree::HistoryTree, di) 
     
     push!(tree.d, di)
-    tree.root = treehash(tree.d; hash = tree.hash)
-    
+    #tree.root = treehash(tree.d; hash = tree.hash)
+    tree.root = treehash!(tree.stack, length(tree), di; hash = tree.hash)
     return
 end
 
@@ -57,6 +195,8 @@ struct ConsistencyProof
     index::Int
     root # Internal
 end
+
+
 
 function ConsistencyProof(tree::HistoryTree, index::Int)
     
@@ -96,9 +236,7 @@ function treehash(d::AbstractVector{<:Any}; hash)
     
     k = power2div(n-1)
     
-    #a = treehash(d[1:k]; hash)
     a = treehash(view(d, 1:k); hash)
-    #println("a = $a")
     
     b = treehash(view(d, k+1:n); hash)
     return hash(a, b)
@@ -198,7 +336,6 @@ function subproof(m::Int, d::AbstractVector{<:Any}, b::Bool; hash)
         
         k = power2div(n-1)
         
-        #if m <= k + 1
         if m <= k
             append!(path, subproof(m, view(d, 1:k), b; hash))
             push!(path, treehash(view(d, k+1:n); hash))
@@ -284,4 +421,55 @@ function verify_consistency(p::Vector{<:Any}, second, first, second_hash, first_
 end
 
 
-end # module MerkleTrees
+struct TreeSlice
+    stack::Vector{<:Any}
+    proof::ConsistencyProof
+end
+
+
+function TreeSlice(tree::HistoryTree, range)
+
+    (; d, hash) = tree
+
+    if first(range) == 1
+        stack0 = []
+    else
+        stack0 = stack(view(d, 1:(first(range)-1)); hash)
+    end
+
+    proof = ConsistencyProof(tree, last(range))
+
+    return TreeSlice(stack0, proof)
+end
+
+
+function slice(tree::HistoryTree, range)
+
+    leafs = tree.d[range]
+    proof = TreeSlice(tree, range)
+
+    return (leafs, proof)
+end
+
+# it should be possible to evaluete root more efficiently rather than steping increments
+
+function verify(leafs::AbstractVector{<:Any}, proof::TreeSlice, root, index; hash)
+
+    verify(proof.proof, root, index; hash) || return false
+
+    stack = copy(proof.stack)
+    index = proof.proof.index - length(leafs)
+
+    local rooti
+
+    for i in leafs
+        index += 1
+        rooti = treehash!(stack, index, i; hash)
+    end
+
+    return rooti == proof.proof.root
+end
+
+verify(leaf, proof::TreeSlice, root, index; hash) = verify([leaf], proof, root, index; hash)
+
+end

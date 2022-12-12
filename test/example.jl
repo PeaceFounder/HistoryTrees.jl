@@ -1,6 +1,6 @@
 using Test
 import Nettle
-import HistoryTrees: HistoryTree, InclusionProof, verify, root
+import HistoryTrees: HistoryTree, InclusionProof, slice, verify, root
 
 struct Digest
     data::Vector{UInt8}
@@ -39,3 +39,11 @@ proof = InclusionProof(tree, 1)
 
 proof = InclusionProof(tree, 2)
 @test verify(proof, root(tree), 2; hash = digest)
+
+record!(tree, "Hello World 3")
+
+leafs, proof = slice(tree, 2:3)
+@test verify(leafs, proof, root(tree), 3; hash = digest)
+
+leafs, proof = slice(tree, 1:2)
+@test verify(leafs, proof, root(tree), 3; hash = digest)
