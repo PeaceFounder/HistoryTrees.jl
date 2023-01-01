@@ -1,7 +1,7 @@
 name = "HistoryTrees"
 uuid = "6629d18c-a67a-486a-9b40-962f9d752038"
 authors = ["Janis Erdmanis <janiserdmanis@protonmail.ch>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [compat]
 julia = "1"
